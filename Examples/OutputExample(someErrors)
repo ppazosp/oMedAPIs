@@ -1,9 +1,9 @@
 {
-  "cantidad_dosis": "0,5 mg",
-  "cropped_image": "iVBORw0KGgoAAAANSUhEUgAAAjQAAAGrCAIAAABYMZpfAAAgAElEQVR4AezB6X...",
-  "frecuencia": "3/day",
+  "cantidad_dosis": "0.5",
+  "cropped_image": "iVBORw0KGgoAAAANSUhEUgAAAjQAAAGrCAIAAABYMZpfAAAgAElEQVR4AezB6XIt6Zme5...",
+  "frecuencia": "8",
   "nombre_del_medicamento": "Lorazepam",
-  "numero_de_comprimidos": "50 comprimidos",
+  "numero_de_comprimidos": "50",
   "parte_afectada": "stomach",
   "primera_ingestion": "26/02/2025 08:00"
 }

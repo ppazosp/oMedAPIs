@@ -10,6 +10,7 @@ from flasgger import Swagger
 from flask import Flask, request, jsonify
 from flask_httpauth import HTTPTokenAuth
 from openai import OpenAI as openai
+from werkzeug.utils import secure_filename
 
 # Ruta donde se guardarán los archivos JSON
 JSON_FOLDER = "json_files"
@@ -26,6 +27,11 @@ client = openai(api_key=OPENAI_API_KEY)
 
 # Flask setup
 app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = 'uploads'
+
+# Crear carpeta de subida si no existe
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
 swagger = Swagger(app)
 auth = HTTPTokenAuth(scheme='Bearer')
 
@@ -71,31 +77,37 @@ def format_event():
         description: Error interno del servidor al procesar la imagen
     """
 
-    if 'image' not in request.files:
+    if 'photo' not in request.files:
         return jsonify({"error": "No se ha proporcionado una imagen en la solicitud."}), 400
 
-    image = request.files['image']
+    image = request.files['photo']
+    if image.filename == '':
+        return jsonify({'error': 'El archivo de imagen está vacío'}), 400
+
     img_b64_str = image_to_base64(image)
     image.seek(0)
     mime_type = magic.Magic(mime=True)
     mime = mime_type.from_buffer(image.read())
     print(mime)
 
-# Prepare the prompt
+    json_template = json.dumps({
+        "nombre_del_medicamento": "<Nombre>",
+        "numero_de_comprimidos": "<Numero entero>",
+        "cantidad_por_dosis": "<Numero real en mg, solo el numero>"
+    }, indent=4)  # 🔹 Convierte el JSON en un string bien formateado
+
+    # Prepare the prompt
     prompt = f'''
         A partir de la siguiente imagen, quiero que me extraigas la siguiente información relevante del medicamento de manera ordenada y la presentes en el siguiente formato JSON:
 
             Nombre del medicamento (ejemplo: Paracetamol)
-            Cantidad de dosis del medicamento: (ejemplo: 50 capsulas)
-            Cantidad de cada dosis (ejemplo: 200mg)
+            Cantidad de dosis del medicamento: (ejemplo: 50 capsulas, solo el numero)
+            Cantidad de cada dosis (ejemplo: 200mg, siempre lo quiero en miligramos)
 
         Si alguno de los datos no está disponible o no se menciona explícitamente en la imagen ponlo como null. 
 
         El formato JSON debe ser el siguiente:
-
-        "nombre_del_medicamento": "Paracetamol",
-        "numero_de_comprimidos": "10 comprimidos",
-        "cantidad_dosis": "500mg",
+        {json_template}
 
         Instrucciones adicionales:
 
@@ -194,4 +206,4 @@ def clearJson_2(event_json):
 
 if __name__ == '__main__':
     print(f"API_TOKEN en el servidor: {API_TOKEN}")  # Esto debe imprimir un valor, no None
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5001)

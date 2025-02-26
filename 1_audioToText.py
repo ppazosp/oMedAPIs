@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import os  # Manejo del sistema de archivos y rutas
 import requests  # 🔹 Para hacer la solicitud HTTP al servidor 3_textToJson.py
@@ -18,8 +19,9 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")  # API Key de Supabase
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# URL del servidor 3_textToJson.py
-TEXT_TO_JSON_SERVER = "http://localhost:5001/getPillInfo"
+# URL de los servidores
+PHOTO_TO_NAME_SERVER = "http://localhost:5001/img_to_text"
+TEXT_TO_JSON_SERVER = "http://localhost:5002/getPillInfo"
 
 # 🔹 Inicializar cliente de OpenAI con la clave de API cargada
 client = OpenAI(api_key=OPENAI_API_KEY)
@@ -35,36 +37,53 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 # 🔹 Configurar Swagger para generar documentación de la API
 swagger = Swagger(app)
 
-# 🔹 Definir las extensiones de archivo permitidas para la subida de audios
-ALLOWED_EXTENSIONS = {'mp3', 'wav', 'm4a', 'ogg'}
+# 🔹 Definir las extensiones de archivo permitidas
+ALLOWED_AUDIO_EXTENSIONS = {'mp3', 'wav', 'm4a', 'ogg'}
+ALLOWED_IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png'}
 
 
-def allowed_file(filename):
+def allowed_file(filename, allowed_extensions):
     """
     Verifica si el archivo tiene una extensión permitida.
     """
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
 
-def insert_medicamento():
+def insert(data):
     # Definir cada campo por separado
-    nombre = "Paracetamol"
-    dosis = "500mg"
-    cantidad = 20
-    laboratorio = "Bayer"
+    # Extraer valores del JSON recibido
+    nombre = data.get("nombre_del_medicamento")
+    dosis = data.get("cantidad_por_dosis")
+    cantidad = data.get("numero_de_comprimidos")
+    parte_afectada = data.get("parte_afectada")
+    frecuencia = data.get("frecuencia")
+    fecha_inicio = data.get("primera_ingestion")
+    imagen = data.get("cropped_image")
+
+
+    if not nombre or not dosis or not cantidad:
+        return {"error": "Faltan datos obligatorios para el medicamento"}
 
     # Crear diccionario con los valores
-    data = {
+    medicamento = {
         "nombre": nombre,
-        "dosis": dosis,
-        "cantidad": cantidad,
-        "laboratorio": laboratorio
-}
+        "cantidad_por_dosis": dosis,
+        "numero_comprimidos": cantidad,
+        "parte_afectada": parte_afectada,
+    }
+    print(medicamento)
+    tratamiento = {
+        "nombre_medicamento": nombre,
+        "nombre_paciente":"Candela",
+        "fecha_inicio": datetime.strptime(fecha_inicio, "%d/%m/%Y %H:%M").strftime("%Y-%m-%d %H:%M:%S"), #
+        "frecuencia":frecuencia,
+        "imagen": imagen,
+    }
+    print(tratamiento)
+    # Insertar en Supabase
+    response = supabase.table("medicamento").insert(medicamento).execute()
+    response = supabase.table("tratamiento").insert(tratamiento).execute()
 
-# Insertar en Supabase
-response = supabase.table("medicamentos").insert(data).execute()
-
-print(response)  # Verificar respuesta
-
+    print(response)  # Verificar respuesta
 
 # 🔹 Definir el endpoint para la transcripción de audio
 @app.route('/transcribe', methods=['POST'])
@@ -81,11 +100,11 @@ def transcribe_audio():
         type: file
         required: true
         description: Archivo de audio (MP3, WAV, M4A, OGG)
-      - name: event_json
+      - name: photo
         in: formData
-        type: string
+        type: file
         required: true
-        description: JSON con información adicional
+        description: Imagen relacionada con la transcripción
     responses:
       200:
         description: Texto transcrito con éxito
@@ -105,39 +124,38 @@ def transcribe_audio():
     # 🔹 Verificar si los argumentos se han sido enviado en la petición
     if 'audio' not in request.files:
         return jsonify({'error': 'No se encontró el archivo de audio.'}), 400
-    if 'event_json' in request.files:
-        try:
-            event_json_file = request.files['event_json']
-            # Obtener arg json
-            event_json_photo = json.load(event_json_file)  # Cargar JSON desde archivo
-        except json.JSONDecodeError:
-            return jsonify({'error': 'El archivo JSON proporcionado no es válido.'}), 400
-    else:
-        return jsonify({'error': 'No se encontró el JSON con información adicional.'}), 400
+    if 'photo' not in request.files:
+        return jsonify({'error': 'No se encontró la imagen.'}), 400
 
     # Obtener arg audio
     audio_file = request.files['audio']
-    print(event_json_photo)
-    try:
-        pass
-        #event_json_photo = json.loads(event_json_str)
-    except ValueError:
-        return jsonify({'error': 'El JSON proporcionado de photoToNamePill no es válido.'}), 400
+    image_file = request.files['photo']
 
     # 🔹 Verificar si el archivo tiene un nombre válido
     if audio_file.filename == '':
         return jsonify({'error': 'El nombre del archivo está vacío.'}), 400
 
     # 🔹 Verificar si el archivo tiene una extensión permitida
-    if not allowed_file(audio_file.filename):
-        return jsonify({'error': 'Formato de archivo no permitido. Solo se permiten MP3, WAV, M4A y OGG.'}), 400
+    if not allowed_file(audio_file.filename, ALLOWED_AUDIO_EXTENSIONS):
+        return jsonify({'error': 'Formato de archivo de audio no permitido.'}), 400
+    if not allowed_file(image_file.filename, ALLOWED_IMAGE_EXTENSIONS):
+        return jsonify({'error': 'Formato de archivo de imagen no permitido.'}), 400
 
     # 🔹 Guardar el archivo de manera segura en el directorio de almacenamiento temporal
     filename = secure_filename(audio_file.filename)
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     audio_file.save(file_path)
 
+    image_filename = secure_filename(image_file.filename)
+    image_path = os.path.join(app.config['UPLOAD_FOLDER'], image_filename)
+    image_file.save(image_path)
+
     try:
+        # Información de la imagen
+        with open(image_path, 'rb') as image_file:
+            files = {'photo': image_file}  # Enviar la imagen en multipart/form-data
+            event_json_photo = requests.post(PHOTO_TO_NAME_SERVER, files=files).json().get('event_json')
+
         # 🔹 Abrir el archivo y enviarlo a OpenAI Whisper para su transcripción
         with open(file_path, 'rb') as audio:
             transcription = client.audio.transcriptions.create(
@@ -167,13 +185,12 @@ def transcribe_audio():
             return jsonify({'error': 'Los datos recibidos no son JSON válidos.'}), 500
 
         try:
-            print('event_json_photo:' + json.dumps(event_json_photo, indent=4))
-            print('event_json_5001' + json.dumps(event_json_5001, indent=4))
-            insert_data(event_json_photo, 'medicamento')
-            #insert_data(event_json_5001, 'tratamiento')
+            # Comprobaciones
+            #print('event_json_photo:' + json.dumps(event_json_photo, indent=4))
+            #print('event_json_5001' + json.dumps(event_json_5001, indent=4))
 
             merged_json = {**event_json_photo, **event_json_5001}
-            #TODO INSERT BBDD
+            insert(merged_json)
         except ValueError:
             return jsonify({'error': 'No se ha podido hacer el merge.'}), 500
 
@@ -191,4 +208,4 @@ def transcribe_audio():
 
 # 🔹 Ejecutar el servidor Flask en el puerto 5000 si se ejecuta directamente este script
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    app.run(debug=True, port=5000)
