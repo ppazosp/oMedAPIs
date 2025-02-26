@@ -1,5 +1,6 @@
+import json
 import os  # Manejo del sistema de archivos y rutas
-import requests # 🔹 Para hacer la solicitud HTTP al servidor textToJson.py
+import requests  # 🔹 Para hacer la solicitud HTTP al servidor 3_textToJson.py
 from flask import Flask, request, jsonify  # Framework web Flask para manejar peticiones HTTP
 from werkzeug.utils import secure_filename  # Función para asegurar nombres de archivos válidos
 from dotenv import load_dotenv  # Manejo de variables de entorno
@@ -8,11 +9,11 @@ from flasgger import Swagger  # Generación automática de documentación con AP
 
 # 🔹 Cargar variables de entorno desde un archivo .env
 load_dotenv()
-OPENAI_API_KEY = os.getenv('pazos_key')  # Clave de API de OpenAI
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')  # Clave de API de OpenAI
 API_TOKEN = os.getenv('API_TOKEN')  # Token de autenticación para proteger la API
 
-# URL del servidor textToJson.py
-TEXT_TO_JSON_SERVER = "http://localhost:5001/format_event"
+# URL del servidor 3_textToJson.py
+TEXT_TO_JSON_SERVER = "http://localhost:5001/getPillInfo"
 
 # 🔹 Inicializar cliente de OpenAI con la clave de API cargada
 client = OpenAI(api_key=OPENAI_API_KEY)
@@ -31,11 +32,13 @@ swagger = Swagger(app)
 # 🔹 Definir las extensiones de archivo permitidas para la subida de audios
 ALLOWED_EXTENSIONS = {'mp3', 'wav', 'm4a', 'ogg'}
 
+
 def allowed_file(filename):
     """
     Verifica si el archivo tiene una extensión permitida.
     """
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 # 🔹 Definir el endpoint para la transcripción de audio
 @app.route('/transcribe', methods=['POST'])
@@ -52,6 +55,11 @@ def transcribe_audio():
         type: file
         required: true
         description: Archivo de audio (MP3, WAV, M4A, OGG)
+      - name: event_json
+        in: formData
+        type: string
+        required: true
+        description: JSON con información adicional
     responses:
       200:
         description: Texto transcrito con éxito
@@ -68,11 +76,27 @@ def transcribe_audio():
       500:
         description: Error interno del servidor
     """
-    # 🔹 Verificar si el archivo ha sido enviado en la petición
+    # 🔹 Verificar si los argumentos se han sido enviado en la petición
     if 'audio' not in request.files:
         return jsonify({'error': 'No se encontró el archivo de audio.'}), 400
+    if 'event_json' in request.files:
+        try:
+            event_json_file = request.files['event_json']
+            # Obtener arg json
+            event_json_photo = json.load(event_json_file)  # Cargar JSON desde archivo
+        except json.JSONDecodeError:
+            return jsonify({'error': 'El archivo JSON proporcionado no es válido.'}), 400
+    else:
+        return jsonify({'error': 'No se encontró el JSON con información adicional.'}), 400
 
-    audio_file = request.files['audio']  # Obtener el archivo desde la solicitud HTTP
+    # Obtener arg audio
+    audio_file = request.files['audio']
+    print(event_json_photo)
+    try:
+        pass
+        #event_json_photo = json.loads(event_json_str)
+    except ValueError:
+        return jsonify({'error': 'El JSON proporcionado de photoToNamePill no es válido.'}), 400
 
     # 🔹 Verificar si el archivo tiene un nombre válido
     if audio_file.filename == '':
@@ -96,26 +120,45 @@ def transcribe_audio():
             )
 
         text = transcription.text
-
-        # 🔹 Enviar el texto transcrito al Servidor 2 (textToJson.py)
-        response = requests.post(TEXT_TO_JSON_SERVER, json={"transcript": text})
-
+        print('Transcription: ' + text)
         # 🔹 Eliminar el archivo después de la transcripción para ahorrar espacio
         os.remove(file_path)
 
-        if response.status_code == 200:
-            event_json = response.json().get("event")
-            return jsonify({"transcript": text, "event_json": event_json})
+        # 🔹 Enviar el texto transcrito al Servidor 2 (3_textToJson.py)
+        response = requests.post(TEXT_TO_JSON_SERVER, json={'transcript': text})
 
+        if response.status_code != 200:
+            return jsonify(
+                {'error': 'Error al procesar el JSON en el servidor 5001', 'status_code': response.status_code}), 500
 
-        # 🔹 Retornar el texto transcrito como respuesta en formato JSON
-        return jsonify({"error": "Error al convertir texto a JSON"}), 500
+        try:
+            event_json_5001 = response.json().get("event_json")
+        except ValueError:
+            return jsonify({'error': 'El JSON devuelto por el servidor 5001 no es válido.'}), 500
 
+        # Check if jsons are jsons
+        if not isinstance(event_json_photo, dict) or not isinstance(event_json_5001, dict):
+            return jsonify({'error': 'Los datos recibidos no son JSON válidos.'}), 500
+
+        try:
+            print('event_json_photo:' + json.dumps(event_json_photo, indent=4))
+            print('event_json_5001' + json.dumps(event_json_5001, indent=4))
+
+            merged_json = {**event_json_photo, **event_json_5001}
+        except ValueError:
+            return jsonify({'error': 'No se ha podido hacer el merge.'}), 500
+
+        return jsonify(merged_json)
+
+        # Para probar solo la transcripción
+        # return jsonify({"transcript": text})
+    except requests.RequestException as e:
+        return jsonify({'error': f'Error en la solicitud al servidor 5001: {str(e)}'}), 500
     except Exception as e:
-        # 🔹 Si ocurre un error, eliminar el archivo solo si aún existe
         if os.path.exists(file_path):
             os.remove(file_path)
-        return jsonify({'error in transcribe_audio': str(e)}), 500
+        return jsonify({'error': f'Error inesperado: {str(e)}'}), 500
+
 
 # 🔹 Ejecutar el servidor Flask en el puerto 5000 si se ejecuta directamente este script
 if __name__ == '__main__':

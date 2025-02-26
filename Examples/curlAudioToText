@@ -1,0 +1,3 @@
+curl -X POST "http://localhost:5000/transcribe" \
+     -H "Content-Type: multipart/form-data" \
+     -F "audio=@prueba2.ogg"
