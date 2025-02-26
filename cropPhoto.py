@@ -2,8 +2,6 @@ import json
 import cv2
 import numpy as np
 import base64
-from io import BytesIO
-from PIL import Image
 
 def crop_medicine_box(base64_string):
     # Convertir base64 a imagen

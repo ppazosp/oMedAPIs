@@ -79,14 +79,22 @@ def transcribe_audio():
     # 🔹 Verificar si los argumentos se han sido enviado en la petición
     if 'audio' not in request.files:
         return jsonify({'error': 'No se encontró el archivo de audio.'}), 400
-    if 'event_json' not in request.form:
+    if 'event_json' in request.files:
+        try:
+            event_json_file = request.files['event_json']
+            # Obtener arg json
+            event_json_photo = json.load(event_json_file)  # Cargar JSON desde archivo
+        except json.JSONDecodeError:
+            return jsonify({'error': 'El archivo JSON proporcionado no es válido.'}), 400
+    else:
         return jsonify({'error': 'No se encontró el JSON con información adicional.'}), 400
 
-    # Obtener argumentos
+    # Obtener arg audio
     audio_file = request.files['audio']
-    event_json_str = request.form['event_json']  # Json de photoToNamePill
+    print(event_json_photo)
     try:
-        event_json_photo = json.loads(event_json_str)
+        pass
+        #event_json_photo = json.loads(event_json_str)
     except ValueError:
         return jsonify({'error': 'El JSON proporcionado de photoToNamePill no es válido.'}), 400
 

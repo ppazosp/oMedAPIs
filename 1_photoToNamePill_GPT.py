@@ -1,23 +1,20 @@
+import base64
+import datetime
 import json
 import os
-import base64
 import re
 
-from flask import Flask, request, jsonify
-from dotenv import load_dotenv
-from openai import OpenAI as openai
-from flasgger import Swagger
-from flask_httpauth import HTTPTokenAuth
 import magic
-import imghdr
-import datetime
+from dotenv import load_dotenv
+from flasgger import Swagger
+from flask import Flask, request, jsonify
+from flask_httpauth import HTTPTokenAuth
+from openai import OpenAI as openai
 
 # Ruta donde se guardarán los archivos JSON
 JSON_FOLDER = "json_files"
 os.makedirs(JSON_FOLDER, exist_ok=True)  # Crea la carpeta si no existe
 
-
-import cropPhoto
 from cropPhoto import addCroppedPhoto
 
 # Load environment variables
