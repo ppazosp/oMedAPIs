@@ -148,7 +148,7 @@ def transcribe_audio():
         except ValueError:
             return jsonify({'error': 'No se ha podido hacer el merge.'}), 500
 
-        return jsonify({'medication': merged_json})
+        return jsonify(merged_json)
 
         # Para probar solo la transcripción
         # return jsonify({"transcript": text})
