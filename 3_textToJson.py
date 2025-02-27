@@ -70,7 +70,7 @@ def getPillInfo():
             "event_json": {
                 "frecuencia": "<horas entre cada ingestion (poner solo el número en horas)>",
                 "primera_ingestion": "<Fecha y hora de la primera toma (en formato local date time)>",
-                "parte_afectada": "<Parte del cuerpo afectada>"
+                "parte_afectada": "<Parte del cuerpo afectada (clasificado en uno de estos: HEART_RELATED, DIGESTIVE, GENERAL_BODY, BRAIN_RELATED, PSYCHOLOGICAL)>"
             }
     }, indent=4)  # 🔹 Convierte el JSON en un string bien formateado
 
@@ -90,7 +90,7 @@ def getPillInfo():
     
     **Notas importantes:**
     - La transcripción proviene de personas mayores o con dificultades de accesibilidad, por lo que el audio puede tener errores.
-    - Si no es posible extraer la información de un campo, devuelve "null_NoEspecify" en su lugar.
+    - Si no es posible extraer la información de un campo, devuelve "null_NoEspecify" en su lugar, excepto en "Parte del cuerpo afectada", que hay que poner "GENERAL_BODY"".
     - Extrae exclusivamente la información mencionada en el audio sin añadir suposiciones.
     - Devuelve **únicamente** un JSON válido con la estructura especificada.
     

@@ -1,0 +1,79 @@
+{
+  "AFTERBREAKFAST": [],
+  "AFTERDINNER": [
+    {
+      "cantidad_por_dosis": 0.5,
+      "dosis_restantes": 42,
+      "fecha_inicio": "2025-02-25T09:30:00",
+      "hora_toma": "21:30:00",
+      "medicamento": "Lorazepam",
+      "paciente": "Candela",
+      "parte_afectada": "DIGESTIVE"
+    },
+    {
+      "cantidad_por_dosis": 0.1,
+      "dosis_restantes": 45,
+      "fecha_inicio": "2025-02-26T08:00:00",
+      "hora_toma": "20:00:00",
+      "medicamento": "Paracetamol",
+      "paciente": "Candela",
+      "parte_afectada": "DIGESTIVE"
+    }
+  ],
+  "AFTERLUNCH": [],
+  "BEFOREBREAKFAST": [],
+  "BEFOREDINNER": [
+    {
+      "cantidad_por_dosis": 0.5,
+      "dosis_restantes": 42,
+      "fecha_inicio": "2025-02-25T09:30:00",
+      "hora_toma": "17:30:00",
+      "medicamento": "Lorazepam",
+      "paciente": "Candela",
+      "parte_afectada": "DIGESTIVE"
+    },
+    {
+      "cantidad_por_dosis": 0.1,
+      "dosis_restantes": 45,
+      "fecha_inicio": "2025-02-26T08:00:00",
+      "hora_toma": "18:00:00",
+      "medicamento": "Paracetamol",
+      "paciente": "Candela",
+      "parte_afectada": "DIGESTIVE"
+    }
+  ],
+  "BEFORELUNCH": [],
+  "JUSTAWAKE": [],
+  "MIDAFTERNOON": [
+    {
+      "cantidad_por_dosis": 0.5,
+      "dosis_restantes": 42,
+      "fecha_inicio": "2025-02-25T09:30:00",
+      "hora_toma": "17:30:00",
+      "medicamento": "Lorazepam",
+      "paciente": "Candela",
+      "parte_afectada": "DIGESTIVE"
+    }
+  ],
+  "MIDDAY": [],
+  "PREVIOUSTOSLEEP": [
+    {
+      "cantidad_por_dosis": 0.5,
+      "dosis_restantes": 42,
+      "fecha_inicio": "2025-02-25T09:30:00",
+      "hora_toma": "21:30:00",
+      "medicamento": "Lorazepam",
+      "paciente": "Candela",
+      "parte_afectada": "DIGESTIVE"
+    },
+    {
+      "cantidad_por_dosis": 0.1,
+      "dosis_restantes": 45,
+      "fecha_inicio": "2025-02-26T08:00:00",
+      "hora_toma": "22:00:00",
+      "medicamento": "Paracetamol",
+      "paciente": "Candela",
+      "parte_afectada": "DIGESTIVE"
+    }
+  ]
+}
